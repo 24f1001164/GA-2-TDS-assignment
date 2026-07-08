@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST
 
 EMAIL = "24f1001164@ds.study.iitm.ac.in"
-
 app = FastAPI()
 
 app.add_middleware(
