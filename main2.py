@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 from collections import defaultdict
+import app
 
 API_KEY = "ak_syczabztn8fie3a69o0y5gov"
 
