@@ -1,66 +1,67 @@
-from fastapi import Request
-from dotenv import load_dotenv
-import yaml
-import os
+from fastapi import FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List
+from collections import defaultdict
 
-load_dotenv()
+API_KEY = "ak_syczabztn8fie3a69o0y5gov"
 
-DEFAULTS = {
-    "port": 8000,
-    "workers": 1,
-    "debug": False,
-    "log_level": "info",
-    "api_key": "default-secret-000",
-}
+# CHANGE THIS TO YOUR IITM EMAIL
+EMAIL = "YOUR_EMAIL@ds.study.iitm.ac.in"
+
+app = FastAPI()
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-def to_bool(value):
-    return str(value).lower() in ["true", "1", "yes", "on"]
+class Event(BaseModel):
+    user: str
+    amount: float
+    ts: int
 
 
-@app.get("/effective-config")
-def effective_config(request: Request):
-    config = DEFAULTS.copy()
+class AnalyticsRequest(BaseModel):
+    events: List[Event]
 
-    # YAML layer
-    if os.path.exists("config.development.yaml"):
-        with open("config.development.yaml") as f:
-            config.update(yaml.safe_load(f) or {})
 
-    # .env layer
-    if os.getenv("APP_LOG_LEVEL"):
-        config["log_level"] = os.getenv("APP_LOG_LEVEL")
+@app.post("/analytics")
+def analytics(
+    data: AnalyticsRequest,
+    x_api_key: str = Header(None)
+):
+    # Authentication
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
-    if os.getenv("NUM_WORKERS"):
-        config["workers"] = int(os.getenv("NUM_WORKERS"))
+    total_events = len(data.events)
 
-    # OS env layer
-    if os.getenv("APP_WORKERS"):
-        config["workers"] = int(os.getenv("APP_WORKERS"))
+    unique_users = len(set(event.user for event in data.events))
 
-    # CLI overrides (?set=key=value)
-    for item in request.query_params.getlist("set"):
-        if "=" not in item:
-            continue
+    revenue = 0.0
 
-        key, value = item.split("=", 1)
+    user_totals = defaultdict(float)
 
-        if key in ["port", "workers"]:
-            config[key] = int(value)
+    for event in data.events:
+        if event.amount > 0:
+            revenue += event.amount
+            user_totals[event.user] += event.amount
 
-        elif key == "debug":
-            config[key] = to_bool(value)
+    top_user = ""
 
-        else:
-            config[key] = value
+    if user_totals:
+        top_user = max(user_totals, key=user_totals.get)
 
-    # Final type coercion
-    config["port"] = int(config["port"])
-    config["workers"] = int(config["workers"])
-    config["debug"] = bool(config["debug"])
-    config["log_level"] = str(config["log_level"])
-
-    # Always mask the secret
-    config["api_key"] = "****"
-
-    return config
+    return {
+        "email": EMAIL,
+        "total_events": total_events,
+        "unique_users": unique_users,
+        "revenue": revenue,
+        "top_user": top_user
+    }
