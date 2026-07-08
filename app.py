@@ -7,8 +7,7 @@ import app
 
 API_KEY = "ak_syczabztn8fie3a69o0y5gov"
 
-# CHANGE THIS TO YOUR IITM EMAIL
-EMAIL = "YOUR_EMAIL@ds.study.iitm.ac.in"
+EMAIL = "24f1001164@ds.study.iitm.ac.in"
 
 app = FastAPI()
 
